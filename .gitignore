@@ -33,3 +33,6 @@
 
 # VS Code
 *.vscode
+
+# external libraries
+*/external/*
