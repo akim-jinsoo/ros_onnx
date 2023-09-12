@@ -1,7 +1,10 @@
-#include "ros/ros.h"
-#include "sensor_msgs/LaserScan.h"
 #include <vector>
 #include <string>
+#include "ros/ros.h"
+#include "sensor_msgs/LaserScan.h"
+#include "geometry_msgs/PoseStamped.h"
+#include <torch/script.h>
+#include <onnxruntime_cxx_api.h>
 
 using namespace std;
 
@@ -38,7 +41,7 @@ class ObservationListener
   {
     return;
   }
-}
+};
 
 template <typename T>
 size_t vectorProduct(const vector<T>& v)
@@ -64,7 +67,7 @@ int main(int argc, char **argv)
   session_options.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
   string policy_name = "models/model.onnx";
   Ort::Session session(env, policy_name.c_str(), session_options);
-  ROS_INFO("loaded model %s", policy_name);
+  ROS_INFO("loaded model %s", policy_name.c_str());
   Ort::AllocatorWithDefaultOptions allocator;
   Ort::MemoryInfo memory_info = Ort::MemoryInfo::CreateCpu(OrtAllocatorType::OrtArenaAllocator, OrtMemType::OrtMemTypeDefault);
 

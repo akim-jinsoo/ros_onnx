@@ -132,6 +132,16 @@ include_directories(
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
 # add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+list(APPEND CMAKE_PREFIX_PATH "${PROJECT_SOURCE_DIR}/include/external/libtorch")
+find_package(Torch REQUIRED)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
+
+set(ONNX_LIBRARIES "${PROJECT_SOURCE_DIR}/include/external/onnxruntime-linux-x64-1.15.1")
+include_directories(
+  "${ONNX_LIBRARIES}/include"
+  "${ONNX_LIBRARIES}/include/onnxruntime"
+)
+link_directories("${ONNX_LIBRARIES}/lib")
 
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
@@ -149,9 +159,11 @@ add_executable(${PROJECT_NAME}_node src/ros_onnx_node.cpp)
 add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(${PROJECT_NAME}_node
-#   ${catkin_LIBRARIES}
-# )
+target_link_libraries(${PROJECT_NAME}_node
+   ${catkin_LIBRARIES}
+   "${TORCH_LIBRARIES}"
+   onnxruntime
+ )
 
 #############
 ## Install ##
