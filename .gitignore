@@ -35,4 +35,4 @@
 *.vscode
 
 # external libraries
-*/external/*
+*external/
