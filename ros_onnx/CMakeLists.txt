@@ -165,6 +165,7 @@ target_link_libraries(${PROJECT_NAME}_node
    onnxruntime
  )
 
+ set_property(TARGET ${PROJECT_NAME}_node PROPERTY CXX_STANDARD 17)
 #############
 ## Install ##
 #############
