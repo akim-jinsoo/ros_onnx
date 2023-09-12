@@ -9,11 +9,34 @@ class ObservationListener
 {
   public:
     vector<float> scan;
+    vector<float> pose;
+    vector<float> quat;
+    float yaw;
     //void observationCallback();
 
-  void callback(const sensor_msgs::LaserScan::ConstPtr& msg)
+  void CallbackLaserScan(const sensor_msgs::LaserScan::ConstPtr& msg)
   {
+    scan.clear();
     scan = msg->intensities;
+  }
+
+  void CallbackPose(const geometry_msgs::PoseStamped::ConstPtr& msg)
+  {
+    pose.clear();
+    pose.push_back(msg->pose.position.x);
+    pose.push_back(msg->pose.position.y);
+    pose.push_back(msg->pose.position.z);
+
+    quat.clear();
+    quat.push_back(msg->pose.orientation.x);
+    quat.push_back(msg->pose.orientation.y);
+    quat.push_back(msg->pose.orientation.z);
+    quat.push_back(msg->pose.orientation.w);
+  }
+
+  void ObservationManager()
+  {
+    return;
   }
 }
 
@@ -29,7 +52,7 @@ int main(int argc, char **argv)
   ObservationListener obs_listener;
   ros::init(argc, argv, "onnx_inference_node");
   ros::NodeHandle n;
-  ros::Subscriber lidar_sub = n.subscribe("lidar_scans", 1000, &ObservationListener::callback, &obs_listener);
+  ros::Subscriber lidar_sub = n.subscribe("lidar_scans", 1000, &ObservationListener::CallbackLaserScan, &obs_listener);
   ros::Publisher lidar_label_pub = n.advertise<sensor_msgs::LaserScan>("predicted_labels", 1000);
   ros::Rate loop_rate(10); //how fast do we get laser scans? can we trigger on new scan?
 
