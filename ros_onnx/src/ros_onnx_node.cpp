@@ -97,9 +97,9 @@ int main(int argc, char **argv)
   ObservationListener obs_listener;
   ros::init(argc, argv, "onnx_inference_node");
   ros::NodeHandle n;
-  ros::Subscriber lidar_sub = n.subscribe("new_scan", 1000, &ObservationListener::CallbackLaserScan, &obs_listener);
+  ros::Subscriber lidar_sub = n.subscribe("segmented_scan", 1000, &ObservationListener::CallbackLaserScan, &obs_listener);
   ros::Subscriber pose_sub = n.subscribe("localization_ros", 1000, &ObservationListener::CallbackPose, &obs_listener);
-  ros::Publisher lidar_label_pub = n.advertise<sensor_msgs::LaserScan>("segmented_scan", 1000);
+  ros::Publisher lidar_label_pub = n.advertise<sensor_msgs::LaserScan>("segmented_scan_", 1000);
   ros::Rate loop_rate(10); //how fast do we get laser scans? can we trigger on new scan?
 
   // init onnx session
@@ -182,17 +182,19 @@ int main(int argc, char **argv)
       input_ort.clear();
       output_ort.clear();
 
-      //new_pose = torch::from_blob(obs_listener.pose.data(), {1,1,1,3}, options);
-      //poses = torch::cat({poses, new_pose}, 2).index({"...", Slice(1, None), Slice()});
-      //vector<float> pose_value (poses.data_ptr<float>(), poses.data_ptr<float>() + poses.numel());
-      //input_ort.push_back(Ort::Value::CreateTensor<float>(
-      //  memory_info, pose_value.data(), input_sizes.at(0), input_dims.at(0).data(), input_dims.at(0).size()));
-      
+      new_pose = torch::from_blob(obs_listener.pose.data(), {1,1,1,3}, options);
+      poses = torch::cat({poses, new_pose}, 2).index({"...", Slice(1, None), Slice()});
+      vector<float> pose_value (poses.data_ptr<float>(), poses.data_ptr<float>() + poses.numel());
+      input_ort.push_back(Ort::Value::CreateTensor<float>(
+        memory_info, pose_value.data(), input_sizes.at(0), input_dims.at(0).data(), input_dims.at(0).size()));
+
+      //cout << "here" << endl;
+
       new_scan = torch::from_blob(obs_listener.scan.data(), {1,1,1,897}, options);
       scans = torch::cat({scans, new_scan}, 2).index({"...", Slice(1, None), Slice()});
       vector<float> scan_value (scans.data_ptr<float>(), scans.data_ptr<float>() + scans.numel());
       input_ort.push_back(Ort::Value::CreateTensor<float>(
-        memory_info, scan_value.data(), input_sizes.at(0), input_dims.at(0).data(), input_dims.at(0).size()));
+        memory_info, scan_value.data(), input_sizes.at(1), input_dims.at(1).data(), input_dims.at(1).size()));
 
       labels = labels.index({"...", Slice(1, None), Slice()}); //remove 0th col
       exp_weighted_sum = torch::einsum("ijkl,k->ijl", {labels,weights});
@@ -200,7 +202,7 @@ int main(int argc, char **argv)
       labels.index_put_({"...",-1,Slice()}, exp_weighted_sum);
       vector<float> label_value (labels.data_ptr<float>(), labels.data_ptr<float>() + labels.numel());
       input_ort.push_back(Ort::Value::CreateTensor<float>(
-        memory_info, label_value.data(), input_sizes.at(1), input_dims.at(1).data(), input_dims.at(1).size()));
+        memory_info, label_value.data(), input_sizes.at(2), input_dims.at(2).data(), input_dims.at(2).size()));
 
       vector<float> output_value (outputs.data_ptr<float>(), outputs.data_ptr<float>() + outputs.numel());
       output_ort.push_back(Ort::Value::CreateTensor<float>(
