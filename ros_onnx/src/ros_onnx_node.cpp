@@ -47,10 +47,11 @@ EulerAngles Q2E(Quaternion q)
 class ObservationListener
 {
   public:
+    vector<float> raw_scan;
     vector<float> scan;
     vector<float> pose;
     Quaternion quat;
-    float yaw;
+    vector<float> yaw;
 
   void CallbackLaserScan(const sensor_msgs::LaserScan::ConstPtr& msg)
   {
@@ -58,6 +59,7 @@ class ObservationListener
     for (int i=0; i<msg->ranges.size(); ++i)
     {
       float r = msg->ranges[i];
+      raw_scan.push_back(r);
       if (r > 20) r = 20;
       if ( r < 0) r = 0;
       scan.push_back(r/20);
@@ -76,7 +78,8 @@ class ObservationListener
     quat.z = msg->pose.orientation.z;
     quat.w = msg->pose.orientation.w;
 
-    yaw = Q2E(quat).yaw;
+    yaw.clear();
+    yaw.push_back(Q2E(quat).yaw);
   }
 
   void ObservationManager()
@@ -97,9 +100,9 @@ int main(int argc, char **argv)
   ObservationListener obs_listener;
   ros::init(argc, argv, "onnx_inference_node");
   ros::NodeHandle n;
-  ros::Subscriber lidar_sub = n.subscribe("segmented_scan", 1000, &ObservationListener::CallbackLaserScan, &obs_listener);
+  ros::Subscriber lidar_sub = n.subscribe("new_scan", 1000, &ObservationListener::CallbackLaserScan, &obs_listener);
   ros::Subscriber pose_sub = n.subscribe("localization_ros", 1000, &ObservationListener::CallbackPose, &obs_listener);
-  ros::Publisher lidar_label_pub = n.advertise<sensor_msgs::LaserScan>("segmented_scan_", 1000);
+  ros::Publisher lidar_label_pub = n.advertise<sensor_msgs::LaserScan>("segmented_scan", 1000);
   ros::Rate loop_rate(10); //how fast do we get laser scans? can we trigger on new scan?
 
   // init onnx session
@@ -159,6 +162,7 @@ int main(int argc, char **argv)
   torch::Tensor new_label;
   torch::Tensor labels = torch::zeros({1,1,9,897});
   torch::Tensor new_pose;
+  torch::Tensor new_yaw;
   torch::Tensor poses = torch::zeros({1,1,9,3});
   torch::Tensor outputs = torch::zeros({1,1,1,897});
   torch::Tensor exp_weighted_sum;
@@ -183,6 +187,8 @@ int main(int argc, char **argv)
       output_ort.clear();
 
       new_pose = torch::from_blob(obs_listener.pose.data(), {1,1,1,3}, options);
+      new_yaw = torch::from_blob(obs_listener.yaw.data(), {1,1,1,1}, options);
+      new_pose.index_put_({"...",-1}, new_yaw);
       poses = torch::cat({poses, new_pose}, 2).index({"...", Slice(1, None), Slice()});
       vector<float> pose_value (poses.data_ptr<float>(), poses.data_ptr<float>() + poses.numel());
       input_ort.push_back(Ort::Value::CreateTensor<float>(
@@ -222,6 +228,12 @@ int main(int argc, char **argv)
       }
 
       predicted_labels.intensities = class_labels;
+      predicted_labels.ranges = obs_listener.raw_scan;
+      predicted_labels.header.frame_id = "map";
+      predicted_labels.header.stamp = ros::Time::now();
+      predicted_labels.angle_min = -3.14;
+      predicted_labels.angle_max = 3.14;
+      predicted_labels.angle_increment = 0.007;
       lidar_label_pub.publish(predicted_labels);
       loop_rate.sleep();
     }
