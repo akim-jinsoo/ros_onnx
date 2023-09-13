@@ -165,7 +165,8 @@ int main(int argc, char **argv)
   auto options = torch::TensorOptions().dtype(torch::kFloat32);
 
   vector<float> weight_vec {1/8, 2/8, 3/8, 4/8, 5/8, 6/8, 7/8, 1};
-  float weight_sum = reduce(weight_vec.begin(), weight_vec.end());
+  float weight_sum = 0;
+  for (auto i = 0; i < 8; ++i) weight_sum += weight_vec[i];
   for (auto i = 0; i < 8; ++i) weight_vec[i]/weight_sum;
   torch::Tensor weights = torch::from_blob(weight_vec.data(), {8}, options);
 
