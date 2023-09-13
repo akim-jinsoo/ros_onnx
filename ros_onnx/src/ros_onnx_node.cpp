@@ -56,6 +56,7 @@ class ObservationListener
   void CallbackLaserScan(const sensor_msgs::LaserScan::ConstPtr& msg)
   {
     scan.clear();
+    raw_scan.clear();
     for (int i=0; i<msg->ranges.size(); ++i)
     {
       float r = msg->ranges[i];
@@ -194,7 +195,7 @@ int main(int argc, char **argv)
       input_ort.push_back(Ort::Value::CreateTensor<float>(
         memory_info, pose_value.data(), input_sizes.at(0), input_dims.at(0).data(), input_dims.at(0).size()));
 
-      //cout << "here" << endl;
+      //cout << "here" << endl; //DO NOT REMOVE CODE BREAKS WITHOUT THIS COMMENT
 
       new_scan = torch::from_blob(obs_listener.scan.data(), {1,1,1,897}, options);
       scans = torch::cat({scans, new_scan}, 2).index({"...", Slice(1, None), Slice()});
