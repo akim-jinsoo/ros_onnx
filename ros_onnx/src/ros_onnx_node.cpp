@@ -97,9 +97,9 @@ int main(int argc, char **argv)
   ObservationListener obs_listener;
   ros::init(argc, argv, "onnx_inference_node");
   ros::NodeHandle n;
-  ros::Subscriber lidar_sub = n.subscribe("segmented_scan", 1000, &ObservationListener::CallbackLaserScan, &obs_listener);
+  ros::Subscriber lidar_sub = n.subscribe("new_scan", 1000, &ObservationListener::CallbackLaserScan, &obs_listener);
   ros::Subscriber pose_sub = n.subscribe("localization_ros", 1000, &ObservationListener::CallbackPose, &obs_listener);
-  ros::Publisher lidar_label_pub = n.advertise<sensor_msgs::LaserScan>("segmented_scan_prediction", 1000);
+  ros::Publisher lidar_label_pub = n.advertise<sensor_msgs::LaserScan>("segmented_scan", 1000);
   ros::Rate loop_rate(10); //how fast do we get laser scans? can we trigger on new scan?
 
   // init onnx session
