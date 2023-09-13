@@ -60,9 +60,9 @@ class ObservationListener
     for (int i=0; i<msg->ranges.size(); ++i)
     {
       float r = msg->ranges[i];
-      raw_scan.push_back(r);
       if (r > 20) r = 20;
       if ( r < 0) r = 0;
+      raw_scan.push_back(r);
       scan.push_back(r/20);
     }
   }
